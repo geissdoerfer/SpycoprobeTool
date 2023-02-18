@@ -9,7 +9,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="spycoprobe",
-    version="1.0.0",
+    version="1.0.1",
     description="Tool for controlling Spycoprobe SBW debugger",
     long_description=README,
     long_description_content_type="text/markdown",
