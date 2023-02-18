@@ -70,3 +70,10 @@ def halt(ctx):
         probe.start()
         probe.halt()
         probe.stop()
+
+@cli.command(short_help="Control target power supply")
+@click.option("--on/--off", required=True)
+@click.pass_context
+def target_power(ctx, on):
+    with SpycoProbe(ctx.obj["device"]) as probe:
+        probe.target_power(on)

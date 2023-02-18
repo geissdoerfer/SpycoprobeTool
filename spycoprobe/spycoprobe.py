@@ -5,6 +5,7 @@ from typing import Union
 
 from spycoprobe.protocol import ReqType
 from spycoprobe.protocol import ReturnCode
+from spycoprobe.protocol import TargetPowerState
 
 from spycoprobe.protocol import REQUEST_MAX_DATA
 from spycoprobe.protocol import RESPONSE_MAX_DATA
@@ -64,6 +65,14 @@ class SpycoProbe(object):
     def release(self):
         """Continue CPU execution."""
         pkt = struct.pack("=B", int(ReqType.SBW_REQ_RELEASE))
+        self._ser.write(pkt)
+        self._recv_rsp()
+
+    def target_power(self, state: bool):
+        if state:
+            pkt = struct.pack(f"=BBIH", ReqType.SBW_REQ_POWER, 1, 0x0, TargetPowerState.TARGET_POWER_ON)
+        else:
+            pkt = struct.pack(f"=BBIH", ReqType.SBW_REQ_POWER, 1, 0x0, TargetPowerState.TARGET_POWER_OFF)
         self._ser.write(pkt)
         self._recv_rsp()
 
