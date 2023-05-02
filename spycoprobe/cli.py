@@ -1,8 +1,7 @@
 import click
-from serial.tools import list_ports
 
 from spycoprobe.spycoprobe import SpycoProbe
-from spycoprobe.spycoprobe import INTERFACE_NAMES
+from spycoprobe.spycoprobe import DeviceNotFoundError
 
 from spycoprobe.intelhex import IntelHex16bitReader
 from spycoprobe.protocol import REQUEST_MAX_DATA
@@ -20,20 +19,19 @@ from spycoprobe.protocol import IOSetState
 @click.pass_context
 def cli(ctx, device):
     if device is None:
-        hits = list()
-        for port in list_ports.comports():
-            if port.interface in INTERFACE_NAMES:
-                hits.append(port.device)
-        if len(hits) == 1:
-            click.echo(f"Found spycoprobe at {hits[0]}")
-            device = hits[0]
-        elif len(hits) > 1:
-            click.UsageError(f"Found spycoprobes at {' and '.join(hits)}. Try specifying the device with '-d'.")
+        try:
+            ctx.obj["probe"] = SpycoProbe()
+        except DeviceNotFoundError:
+            raise click.UsageError("Couldn't find a Spycoprobe USB device. Try specifying the device with '-d'.")
+    else:
+        ctx.obj["probe"] = SpycoProbe(device)
+    ctx.obj["probe"].__enter__()
 
-    if device is None:
-        raise click.UsageError("Couldn't find a Spycoprobe USB device. Try specifying the device with '-d'.")
 
-    ctx.obj["device"] = device
+@cli.result_callback()
+@click.pass_context
+def process_result(ctx, result, **kwargs):
+    ctx.obj["probe"].__exit__()
 
 
 @cli.command(short_help="Flash provided hex image")
@@ -50,35 +48,32 @@ def flash(ctx, image, verify):
     ih = IntelHex16bitReader()
     ih.loadhex(image)
 
-    with SpycoProbe(ctx.obj["device"]) as probe:
-        probe.start()
-        probe.halt()
-        for pkt in ih.iter_packets(REQUEST_MAX_DATA):
-            probe.write_mem(pkt.address, pkt.values)
-            if verify:
-                rb = probe.read_mem(pkt.address, len(pkt))
-                if (rb != pkt.values).any():
-                    print(rb, pkt.values)
-                    raise click.ClickException(f"Verification failed at 0x{pkt.address:08X}!")
-        probe.release()
-        probe.stop()
+    ctx.obj["probe"].start()
+    ctx.obj["probe"].halt()
+    for pkt in ih.iter_packets(REQUEST_MAX_DATA):
+        ctx.obj["probe"].write_mem(pkt.address, pkt.values)
+        if verify:
+            rb = ctx.obj["probe"].read_mem(pkt.address, len(pkt))
+            if (rb != pkt.values).any():
+                print(rb, pkt.values)
+                raise click.ClickException(f"Verification failed at 0x{pkt.address:08X}!")
+    ctx.obj["probe"].release()
+    ctx.obj["probe"].stop()
 
 
 @cli.command(short_help="Halt target")
 @click.pass_context
 def halt(ctx):
-    with SpycoProbe(ctx.obj["device"]) as probe:
-        probe.start()
-        probe.halt()
-        probe.stop()
+    ctx.obj["probe"].start()
+    ctx.obj["probe"].halt()
+    ctx.obj["probe"].stop()
 
 
 @cli.command(short_help="Control target power supply")
 @click.option("--on/--off", required=True)
 @click.pass_context
 def target_power(ctx, on):
-    with SpycoProbe(ctx.obj["device"]) as probe:
-        probe.target_power(on)
+    ctx.obj["probe"].target_power(on)
 
 
 @cli.command(short_help="Control GPIO pin")
@@ -92,19 +87,17 @@ def target_power(ctx, on):
 )
 @click.pass_context
 def gpio_set(ctx, pin_no, state):
-    with SpycoProbe(ctx.obj["device"]) as probe:
-        if state in ["high", "1"]:
-            probe.gpio_set(pin_no, IOSetState.IOSET_OUT_HIGH)
-        elif state in ["low", "0"]:
-            probe.gpio_set(pin_no, IOSetState.IOSET_OUT_LOW)
-        else:
-            probe.gpio_set(pin_no, IOSetState.IOSET_IN)
+    if state in ["high", "1"]:
+        ctx.obj["probe"].gpio_set(pin_no, IOSetState.IOSET_OUT_HIGH)
+    elif state in ["low", "0"]:
+        ctx.obj["probe"].gpio_set(pin_no, IOSetState.IOSET_OUT_LOW)
+    else:
+        ctx.obj["probe"].gpio_set(pin_no, IOSetState.IOSET_IN)
 
 
 @cli.command(short_help="Read GPIO pin")
 @click.option("--pin-no", "-p", type=int, required=True, help="Pin number")
 @click.pass_context
 def gpio_get(ctx, pin_no):
-    with SpycoProbe(ctx.obj["device"]) as probe:
-        state = probe.gpio_get(pin_no)
-        click.echo(state)
+    state = ctx.obj["probe"].gpio_get(pin_no)
+    click.echo(state)

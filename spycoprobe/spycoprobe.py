@@ -1,7 +1,9 @@
 import serial
 import numpy as np
 import struct
+import logging
 from typing import Union
+from serial.tools import list_ports
 
 from spycoprobe.protocol import ReqType
 from spycoprobe.protocol import ReturnCode
@@ -12,12 +14,34 @@ from spycoprobe.protocol import REQUEST_MAX_DATA
 from spycoprobe.protocol import RESPONSE_MAX_DATA
 
 
+class DeviceNotFoundError(Exception):
+    pass
+
+
 INTERFACE_NAMES = ["Spycoprobe SBW", "Rioteeprobe SBW"]
 
 
+def find_device():
+    hits = list()
+    for port in list_ports.comports():
+        if port.interface in INTERFACE_NAMES:
+            hits.append(port.device)
+
+    if not hits:
+        raise DeviceNotFoundError("Couldn't find a Spycoprobe USB device.")
+    elif len(hits) == 1:
+        logging.info(f"Found spycoprobe at {hits[0]}")
+        return hits[0]
+    else:
+        raise DeviceNotFoundError(f"Found multiple spycoprobes at {' and '.join(hits)}")
+
+
 class SpycoProbe(object):
-    def __init__(self, port, baudrate=1000000, timeout=1.0):
-        self._port = port
+    def __init__(self, port=None, baudrate=1000000, timeout=1.0):
+        if port is None:
+            self._port = find_device()
+        else:
+            self._port = port
         self._baudrate = baudrate
         self._timeout = timeout
 
