@@ -3,8 +3,6 @@ import click
 from spycoprobe.spycoprobe import SpycoProbe
 from spycoprobe.spycoprobe import DeviceNotFoundError
 
-from spycoprobe.intelhex import IntelHex16bitReader
-from spycoprobe.protocol import REQUEST_MAX_DATA
 from spycoprobe.protocol import IOSetState
 
 
@@ -45,19 +43,8 @@ def process_result(ctx, result, **kwargs):
 @click.option("--verify", is_flag=True, default=True, help="Verify while writing")
 @click.pass_context
 def flash(ctx, image, verify):
-    ih = IntelHex16bitReader()
-    ih.loadhex(image)
-
     ctx.obj["probe"].start()
-    ctx.obj["probe"].halt()
-    for pkt in ih.iter_packets(REQUEST_MAX_DATA):
-        ctx.obj["probe"].write_mem(pkt.address, pkt.values)
-        if verify:
-            rb = ctx.obj["probe"].read_mem(pkt.address, len(pkt))
-            if (rb != pkt.values).any():
-                print(rb, pkt.values)
-                raise click.ClickException(f"Verification failed at 0x{pkt.address:08X}!")
-    ctx.obj["probe"].release()
+    ctx.obj["probe"].flash(image, verify)
     ctx.obj["probe"].stop()
 
 

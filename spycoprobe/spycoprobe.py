@@ -5,6 +5,7 @@ import logging
 from typing import Union
 from serial.tools import list_ports
 
+from spycoprobe.intelhex import IntelHex16bitReader
 from spycoprobe.protocol import ReqType
 from spycoprobe.protocol import ReturnCode
 from spycoprobe.protocol import TargetPowerState
@@ -129,3 +130,17 @@ class SpycoProbe(object):
         pkt = struct.pack(f"=BBI", ReqType.SBW_REQ_READ, dlen, addr)
         self._ser.write(pkt)
         return self._recv_rsp()
+
+    def flash(self, image, verify: bool):
+        ih = IntelHex16bitReader()
+        ih.loadhex(image)
+
+        self.halt()
+        for pkt in ih.iter_packets(REQUEST_MAX_DATA):
+            self.write_mem(pkt.address, pkt.values)
+            if verify:
+                rb = self.read_mem(pkt.address, len(pkt))
+                if (rb != pkt.values).any():
+                    print(rb, pkt.values)
+                    raise Exception(f"Verification failed at 0x{pkt.address:08X}!")
+        self.release()
