@@ -6,6 +6,7 @@ from typing import Union
 from spycoprobe.protocol import ReqType
 from spycoprobe.protocol import ReturnCode
 from spycoprobe.protocol import TargetPowerState
+from spycoprobe.protocol import IOSetState
 
 from spycoprobe.protocol import REQUEST_MAX_DATA
 from spycoprobe.protocol import RESPONSE_MAX_DATA
@@ -75,6 +76,16 @@ class SpycoProbe(object):
             pkt = struct.pack(f"=BBIH", ReqType.SBW_REQ_POWER, 1, 0x0, TargetPowerState.TARGET_POWER_OFF)
         self._ser.write(pkt)
         self._recv_rsp()
+
+    def gpio_set(self, pin_no, state: IOSetState):
+        pkt = struct.pack(f"=BBI2H", ReqType.SBW_REQ_IOSET, 2, 0x0, pin_no, state)
+        self._ser.write(pkt)
+        self._recv_rsp()
+
+    def gpio_get(self, pin_no) -> bool:
+        pkt = struct.pack(f"=BBIH", ReqType.SBW_REQ_IOGET, 2, 0x0, pin_no)
+        self._ser.write(pkt)
+        return bool(self._recv_rsp()[0])
 
     def write_mem(self, addr, data: Union[int, np.ndarray]):
         """Write a word to NVM or RAM."""
