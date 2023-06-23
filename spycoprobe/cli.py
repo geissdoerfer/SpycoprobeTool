@@ -63,6 +63,13 @@ def target_power(ctx, on):
     ctx.obj["probe"].target_power(on)
 
 
+@cli.command(short_help="Control power supply bypass")
+@click.option("--on/--off", required=True)
+@click.pass_context
+def bypass(ctx, on):
+    ctx.obj["probe"].bypass(on)
+
+
 @cli.command(short_help="Control GPIO pin")
 @click.option("--pin-no", "-p", type=int, required=True, help="Pin number")
 @click.option(

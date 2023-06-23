@@ -9,6 +9,7 @@ from spycoprobe.intelhex import IntelHex16bitReader
 from spycoprobe.protocol import ReqType
 from spycoprobe.protocol import ReturnCode
 from spycoprobe.protocol import TargetPowerState
+from spycoprobe.protocol import BypassState
 from spycoprobe.protocol import IOSetState
 
 from spycoprobe.protocol import REQUEST_MAX_DATA
@@ -103,6 +104,14 @@ class SpycoProbe(object):
             pkt = struct.pack(f"=BBIH", ReqType.SBW_REQ_POWER, 1, 0x0, TargetPowerState.TARGET_POWER_ON)
         else:
             pkt = struct.pack(f"=BBIH", ReqType.SBW_REQ_POWER, 1, 0x0, TargetPowerState.TARGET_POWER_OFF)
+        self._ser.write(pkt)
+        self._recv_rsp()
+
+    def bypass(self, state: bool):
+        if state:
+            pkt = struct.pack(f"=BBIH", ReqType.SBW_REQ_BYPASS, 1, 0x0, BypassState.BYPASS_ON)
+        else:
+            pkt = struct.pack(f"=BBIH", ReqType.SBW_REQ_BYPASS, 1, 0x0, BypassState.BYPASS_OFF)
         self._ser.write(pkt)
         self._recv_rsp()
 

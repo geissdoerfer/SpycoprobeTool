@@ -14,6 +14,7 @@ class ReqType(IntEnum):
     SBW_REQ_POWER = 6
     SBW_REQ_IOSET = 7
     SBW_REQ_IOGET = 8
+    SBW_REQ_BYPASS = 9
 
 
 class ReturnCode(IntEnum):
@@ -21,6 +22,11 @@ class ReturnCode(IntEnum):
     SBW_RC_ERR_GENERIC = 1
     SBW_RC_ERR_UNKNOWN_REQ = 2
     SBW_RC_ERR_UNSUPPORTED = 3
+
+
+class BypassState(IntEnum):
+    BYPASS_OFF = 0
+    BYPASS_ON = 1
 
 
 class TargetPowerState(IntEnum):
