@@ -20,13 +20,17 @@ class DeviceNotFoundError(Exception):
 
 
 INTERFACE_NAMES = ["Spycoprobe SBW", "Rioteeprobe SBW"]
+USB_VID = 0x1209
+USB_PIDS = [0xC8A0, 0xC8A1]
 
 
 def find_device():
     hits = list()
     for port in list_ports.comports():
-        if port.interface in INTERFACE_NAMES:
+        if (port.vid == USB_VID) and (port.pid in USB_PIDS) and (port.location.endswith("3")):
             hits.append(port.device)
+        else:
+            logging.debug(f"{port.vid:04X}, {port.pid:04X}")
 
     if not hits:
         raise DeviceNotFoundError("Couldn't find a Spycoprobe USB device.")
